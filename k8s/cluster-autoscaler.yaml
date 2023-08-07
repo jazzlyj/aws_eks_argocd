@@ -1,0 +1,44 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-autoscaler
+  namespace: argocd
+spec:
+  destination:
+    namespace: kube-system
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    chart: cluster-autoscaler
+    helm:
+      values: |
+        extraArgs:
+          expander: priority
+        expanderPriorities: |-
+          10: 
+            - .*m5\.2xlarge.*
+          100: 
+            - .*t3\.medium.*
+        autoDiscovery:
+          clusterName: argo-poc
+        awsRegion: us-east-2
+        image:
+          tag: v1.20.3
+        rbac:
+          serviceAccount:
+            name: cluster-autoscaler
+            annotations:
+              eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_NUMBER>:role/cluster_autoscaler
+    repoURL: https://kubernetes.github.io/autoscaler
+    targetRevision: 9.29.1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 2
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m0s
