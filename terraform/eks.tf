@@ -40,7 +40,6 @@ module "eks" {
     vpc-cni = {
       most_recent = true
     }
-
   }
 
   cluster_identity_providers = {
