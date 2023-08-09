@@ -25,23 +25,27 @@ module "eks" {
 
   cluster_ip_family = "ipv4"
 
-  create_cni_ipv6_iam_policy = true
-
   cluster_addons = {
+    aws-ebs-csi-driver = {
+      most_recent = true
+      resolve_conflict = "OVERWRITE"
+    }
     coredns = {
       preserve    = true
       most_recent = true
-
-      timeouts = {
-        create = "25m"
-        delete = "10m"
-      }
     }
     kube-proxy = {
       most_recent = true
     }
     vpc-cni = {
       most_recent = true
+    }
+
+  }
+
+  cluster_identity_providers = {
+    sts = {
+      client_id = "sts.amazonaws.com"
     }
   }
 
@@ -57,10 +61,23 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 }
 
-resource "aws_kms_key" "eks" {
-  description             = "EKS Secret Encryption Key"
-  deletion_window_in_days = 7
-  enable_key_rotation     = true
+module "vpc_cni_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.28"
+
+  role_name_prefix = "${var.environment}_eks"
+
+  attach_vpc_cni_policy = true
+  attach_ebs_csi_policy = true
+
+  vpc_cni_enable_ipv4 = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
+    }
+  }
 
   tags = var.tags
 }
@@ -72,7 +89,7 @@ resource "aws_eks_node_group" "spot" {
   subnet_ids      = module.vpc.private_subnets
 
   scaling_config {
-    desired_size = 1
+    desired_size = 2
     max_size     = 7
     min_size     = 1
   }
@@ -80,4 +97,12 @@ resource "aws_eks_node_group" "spot" {
   update_config {
     max_unavailable = 1
   }
+}
+
+resource "aws_kms_key" "eks" {
+  description             = "EKS Secret Encryption Key"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = var.tags
 }
