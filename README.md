@@ -12,12 +12,13 @@ The deployment set up the following resources:
 
 ## Prerequisites
 * AWS Account with necessary permissions
-* Terraform v1.5+ installed
-* kubectl v1.27+ installed
+* Terraform v1.8+ installed
+* kubectl v1.29+ installed
 * AWS CLI configured with access credentials
 
 ## Deploy Infrastructure
-Update needed delcarations in variables.tf
+Update needed versions, AWS acctid and domain name in the tf files
+
 ```bash
 cd terraform
 
@@ -26,6 +27,13 @@ terraform plan -out plan.out
 terraform apply plan.out
 ```
 **Note:** You may have to apply twice
+
+### Sequence notes
+* Make sure there is a valid public domain hosted in AWS R53
+* Deploy vpc first (vpc, variables, versions) 
+* Add eks.tf and iam.tf into tf dir (being deployed from) then tfi, and then tfa
+* Add argocd.tf into tf dir and then tfa
+
 ## Deploy K8s resources
 
 Update declarations in the following files with your account information:
